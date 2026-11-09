@@ -1,0 +1,159 @@
+name: Code Quality, Build, and Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - uat
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+      - develop
+      - uat
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Unit tests are enabled for pull requests
+  RUN_TESTS: true
+  PYTHON_VERSION: "3.14"
+  REGISTRY: registry.digitalocean.com
+  IMAGE_NAME: fastboil-api
+  DOCKER_PLATFORM: linux/amd64
+  POSTGRES_HOST: localhost
+  POSTGRES_USER: fastboil
+  POSTGRES_PASSWORD: fastboil
+  POSTGRES_DB: fastboil_test
+
+jobs:
+  quality_check:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Load Cached Dependencies
+        id: load_cached_dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Install prek
+        uses: taiki-e/install-action@v2
+        with:
+          tool: prek
+
+      - name: Cache prek
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/prek
+          key: ${{ runner.os }}-prek-${{ hashFiles('prek.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-prek-
+
+      - name: Run Code Quality Checks (prek)
+        run: |
+          SKIP=no-commit-to-branch prek run --all-files
+
+      - name: Run Tests
+        if: env.RUN_TESTS == 'true'
+        run: uv run pytest tests/unit_tests -v
+        env:
+          POSTGRES_HOST: ${{ env.POSTGRES_HOST }}
+
+  build_and_deploy:
+    name: Build and Deploy to DigitalOcean
+    needs: quality_check
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check deployment credentials
+        id: deployment
+        env:
+          DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        run: |
+          if [ -n "$DIGITALOCEAN_ACCESS_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout merged commit
+        if: steps.deployment.outputs.enabled == 'true'
+        uses: actions/checkout@v6
+      - name: Set up Docker Buildx
+        if: steps.deployment.outputs.enabled == 'true'
+        uses: docker/setup-buildx-action@v3
+      - name: Install doctl
+        if: steps.deployment.outputs.enabled == 'true'
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Authenticate Docker to DigitalOcean Container Registry
+        if: steps.deployment.outputs.enabled == 'true'
+        run: doctl registry login --expiry-seconds 1200
+      - name: Compute image metadata
+        if: steps.deployment.outputs.enabled == 'true'
+        id: meta
+        env:
+          REGISTRY_NAME: ${{ vars.DO_REGISTRY_NAME }}
+        run: |
+          if [ -z "$REGISTRY_NAME" ]; then
+            echo "DO_REGISTRY_NAME GitHub variable is required" >&2
+            exit 1
+          fi
+
+          IMAGE_REPOSITORY="${REGISTRY}/${REGISTRY_NAME}/${GITHUB_REPOSITORY}"
+          IMAGE_TAG="${GITHUB_SHA::7}"
+
+          echo "image_repository=${IMAGE_REPOSITORY}" >> "$GITHUB_OUTPUT"
+          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+      - name: Build and push image
+        if: steps.deployment.outputs.enabled == 'true'
+        uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILDKIT: 1
+        with:
+          context: .
+          target: base
+          platforms: ${{ env.DOCKER_PLATFORM }}
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image_repository }}:${{ steps.meta.outputs.image_tag }}
+            ${{ steps.meta.outputs.image_repository }}:latest

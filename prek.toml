@@ -1,0 +1,69 @@
+# Configuration file for `prek`, a git hook framework written in Rust.
+# See https://prek.j178.dev for more information.
+#:schema https://www.schemastore.org/prek.json
+
+ci = { autofix_prs = false, autoupdate_schedule = "weekly" }
+
+[[repos]]
+repo = "builtin"
+
+[[repos.hooks]]
+id = "trailing-whitespace"
+exclude = '(\.sql$|\.md$)'
+
+[[repos.hooks]]
+id = "end-of-file-fixer"
+
+[[repos.hooks]]
+id = "check-merge-conflict"
+fail_fast = true
+
+[[repos.hooks]]
+id = "check-yaml"
+fail_fast = true
+
+[[repos.hooks]]
+id = "check-toml"
+fail_fast = true
+
+[[repos.hooks]]
+id = "check-json"
+fail_fast = true
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "ruff-check"
+name = "ruff check"
+entry = "uv run ruff check --fix"
+language = "system"
+types = ["python"]
+pass_filenames = false
+fail_fast = true
+
+[[repos.hooks]]
+id = "ruff-format"
+name = "ruff format"
+entry = "uv run ruff format --check"
+language = "system"
+types = ["python"]
+pass_filenames = false
+fail_fast = true
+
+[[repos.hooks]]
+id = "bandit"
+name = "bandit security audit"
+entry = "uv run bandit -ll -iii -r app"
+language = "system"
+types = ["python"]
+pass_filenames = false
+fail_fast = true
+
+[[repos.hooks]]
+id = "codespell"
+name = "codespell"
+entry = "uv run codespell"
+language = "system"
+pass_filenames = false
+fail_fast = true

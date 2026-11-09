@@ -1,0 +1,278 @@
+[project]
+name = "fastapi-boilerplate"
+version = "0.1.0"
+description = "FastAPI backend boilerplate, benchmark & containerization showcase"
+readme = "README.md"
+requires-python = ">=3.14"
+authors = [
+  { name = "Vinay Kumar Sharma", email = "vinay.sharma@impacttxtech.com" },
+]
+license = { text = "MIT" }
+classifiers = ["Programming Language :: Python :: 3.14", "Framework :: FastAPI"]
+dependencies = [
+  "aiofiles>=24.1.0",
+  "alembic>=1.14.0",
+  "asyncpg>=0.30.0",
+  "email-validator>=2.2.0",
+  "fastapi>=0.162.2",
+  "httpx2[brotli,http2,zstd]>=2.16.0",
+  "itsdangerous>=2.2.0",
+  "loguru>=0.7.3",
+  "orjson>=3.10.0",
+  "psycopg>=3.2.0",
+  "psycopg-binary>=3.2.0",
+  "pwdlib[argon2]>=0.3.0",
+  "pydantic>=2.12.0",
+  "pydantic-extra-types[phonenumbers]>=2.10.0",
+  "pydantic-settings>=2.7.0",
+  "pyjwt[crypto]>=2.15.0",
+  "python-multipart>=0.0.20",
+  "sqlalchemy[asyncio]>=2.0.36",
+  "sqlmodel>=0.0.22",
+  "uvicorn[standard]>=0.34.0",
+]
+
+[dependency-groups]
+dev = [
+  "bandit>=1.9.1",
+  "black>=25.9.0",
+  "codespell>=2.4.1",
+  "ipykernel>=7.0.1",
+  "ipython>=9.6.0",
+  "mimesis>=18.0.0",
+  "pre-commit>=4.3.0",
+  "pyrefly>=1.0.0",
+  "pyupgrade>=3.21.2",
+  "ruff>=0.15.17",
+  "boto3-stubs[full]>=1.43.116",
+  "types-aiobotocore[full]>=3.10.0",
+  "types-aiofiles>=25.1.0.20251011",
+]
+test = [
+  { include-group = "dev" },
+  "coverage>=7.11.0",
+  "factory-boy>=3.3.3",
+  "pytest>=8.4.2",
+  "pytest-asyncio>=1.2.0",
+  "pytest-cov>=7.1.0",
+  "pytest-randomly>=4.0.1",
+  "pytest-sugar>=1.1.1",
+  "pytest-xdist>=3.8.0",
+]
+
+[tool.uv]
+managed = true
+
+[tool.black]
+line-length = 120
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.pyrefly_cache
+  | \.pytest_cache
+  | \.tox
+  | \.venv
+  | _build
+  | __pycache__
+  | buck-out
+  | build
+  | dist
+  | migrations
+  | snapshots
+  | fixtures
+)/
+'''
+
+[tool.coverage.run]
+branch = true
+omit = [
+  "**/__init__.py",
+  "app/main.py",
+  "tests/*",
+  "snapshots/*",
+  "app/migrations/*",
+  "app/initial_data.py",
+]
+disable_warnings = ["no-data-collected"]
+parallel = true
+sigterm = true
+source = ["app/"]
+
+[tool.coverage.report]
+omit = [
+  "**/__init__.py",
+  "app/main.py",
+  "app/core/config.py",
+  "tests/*",
+  "snapshots/*",
+  "app/migrations/*",
+]
+# Regexes for lines to exclude from consideration
+exclude_also = [
+  # Don't complain about missing debug-only code:
+  "def __repr__",
+  "if self\\.debug",
+
+  # Don't complain if tests don't hit defensive assertion code:
+  "raise AssertionError",
+  "raise NotImplementedError",
+
+  # Don't complain if non-runnable code isn't run:
+  "if 0:",
+  "if __name__ == .__main__.:",
+
+  # Don't complain about abstract methods, they aren't run:
+  "@(abc\\.)?abstractmethod",
+]
+
+exclude_lines = [
+  'pragma: no cover',
+  'if TYPE_CHECKING:',
+  'if typing.TYPE_CHECKING:',
+  'if __name__ == .__main__.:',
+  "raise NotImplementedError",
+  "return NotImplemented",
+  "except KeyboardInterrupt as exc",
+]
+ignore_errors = true
+show_missing = true
+# Total code coverage should be 75% or above.
+fail_under = 75
+
+[tool.coverage.html]
+directory = "coverage-reports"
+
+[tool.pytest.ini_options]
+addopts = "-rPsa --cov=. --cov-report html --cov-report xml:coverage-reports/coverage.xml --no-cov-on-fail"
+plugins = ["pytest_asyncio"]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = [
+  "error",
+  "ignore::UserWarning",
+  "ignore::DeprecationWarning",
+  # note the use of single quote below to denote "raw" strings in TOML
+  'ignore:function ham\(\) is deprecated:DeprecationWarning',
+  # 'ignore:function ham\(\) is deprecated:DeprecationWarning',
+  "ignore:.*LangChainDeprecationWarning.*",
+]
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+  "external: marks tests that make real external network requests (deselect with '-m \"not external\"')",
+  "load: heavy-traffic / concurrency tests",
+]
+
+[tool.ruff]
+show-fixes = true
+fix = true
+line-length = 120
+target-version = "py314"
+extend-exclude = ["*.sql", "fixtures/*", "snapshots/*", ".vscode/*"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+docstring-code-line-length = 79
+
+[tool.ruff.lint]
+extend-select = [
+  "B",
+  "BLE",
+  "C4",
+  "ERA",
+  "I",
+  "ICN",
+  "INP",
+  "ISC",
+  "N",
+  "NPY",
+  "PGH",
+  "PIE",
+  "Q",
+  "RET",
+  "RSE",
+  "RUF",
+  "S",
+  "SIM",
+  "T20",
+  # "TCH",
+  "TID",
+  "YTT",
+  "A001",
+  "A002",
+  "A003",
+]
+ignore = [
+  "E402",
+  "B905",
+  "N818",
+  "S101",
+  "B008",
+  "ISC001",
+  "E711",
+] # E711 should be ignored for Beanie's `Document` find only queries.
+logger-objects = ["loguru.logger"]
+dummy-variable-rgx = "^_$"
+
+[tool.ruff.lint.pep8-naming]
+classmethod-decorators = [
+  # Allow Pydantic's `@field_validator` decorator to trigger class method treatment.
+  "pydantic.field_validator",
+  # Allow SQLAlchemy's dynamic decorators, like `@field.expression`, to trigger class method treatment.
+  "declared_attr",
+  "expression",
+  "comparator",
+]
+
+[tool.ruff.lint.isort]
+case-sensitive = true
+combine-as-imports = true
+classes = ["SVC"]
+force-sort-within-sections = true
+known-first-party = ["app", "tests"]
+relative-imports-order = "closest-to-furthest"
+section-order = [
+  "future",
+  "standard-library",
+  "third-party",
+  "first-party",
+  "local-folder",
+]
+
+[tool.ruff.lint.mccabe]
+# Unlike Flake8, default to a complexity level of 10.
+max-complexity = 10
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 88
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel", "beanie.Document"]
+exempt-modules = ["typing", "typing_extensions"]
+
+# Ignore `E402` (import violations) in all `__init__.py` files, and in `path/to/file.py`.
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402"]
+"scripts/*" = ["INP001"]
+
+[tool.pyrefly]
+project-includes = ["app/**/*.py*", "tests/**/*.py*"]
+project-excludes = [".venv", "app/migrations/**"]
+python-version = "3.14"
+preset = "legacy"
+check-unannotated-defs = true
+
+# Pyright config for Pylance in VS Code
+[tool.pyright]
+include = ["app", "tests"]
+exclude = ["app/migrations", "snapshots"]
+
+[tool.codespell]
+skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.yml,*.toml,*.ipynb,uv.lock,coverage*,.vscode,.venv,.ruff_cache,.semgrep*'
+quiet-level = 3
+ignore-words-list = ["fastapi"]
+ignore-regex = "caf%C3%A9"

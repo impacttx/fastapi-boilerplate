@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+env/
+venv/
+ENV/
+
+# uv
+.uv/
+
+# Testing
+.pytest_cache/
+coverage-reports/
+.coverage
+.coverage.*
+htmlcov/
+
+# Distribution
+dist/
+build/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logfire_credentials.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# OpenAPI (generated — commit if you want to track schema changes)
+openapi.json
+uploads/*
